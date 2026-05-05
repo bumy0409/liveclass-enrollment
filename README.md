@@ -8,24 +8,34 @@
 
 - **Java 17** / **Spring Boot 3.5.0**
 - **Spring Data JPA** (Hibernate)
-- **MySQL 8** (운영) / **H2** (테스트)
+- **MySQL 8** (운영) / **H2** (개발 · 테스트)
 - **Gradle**
 
 ## 실행 방법
 
-### 로컬 (MySQL 필요)
+### 방법 1. H2 인메모리 DB (MySQL 설치 불필요, 가장 빠름)
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=h2'
+```
+
+- DB 설치 없이 바로 실행 가능
+- 서버 재시작 시 데이터 초기화됨
+- H2 콘솔: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:liveclass`)
+
+### 방법 2. 로컬 MySQL
 
 ```bash
 # MySQL에 데이터베이스 생성
-CREATE DATABASE liveklass;
+CREATE DATABASE liveclass;
 
-# application.yml에서 DB 접속 정보 수정 후 실행
+# src/main/resources/application.yml에서 username, password 수정 후 실행
 ./gradlew bootRun
 ```
 
-기본 설정: `localhost:3306/liveklass`, username=`root`, password=`password`
+기본 설정: `localhost:3306/liveclass`, username=`root`, password=`password`
 
-### Docker Compose
+### 방법 3. Docker Compose
 
 ```bash
 docker compose up
