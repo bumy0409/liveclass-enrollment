@@ -51,22 +51,45 @@ docker compose up
 X-User-Id: 1
 ```
 
-## API 목록 및 예시
+## API 명세
 
-### 강의(Course)
+### 공통
 
-| Method | URL | 설명 |
-|--------|-----|------|
-| POST | /api/courses | 강의 등록 |
-| GET | /api/courses | 강의 목록 조회 (상태 필터, 페이지네이션) |
-| GET | /api/courses/{courseId} | 강의 상세 조회 |
-| PATCH | /api/courses/{courseId}/status | 강의 상태 변경 |
+- **Base URL**: `http://localhost:8080`
+- **인증**: 모든 요청에 `X-User-Id` 헤더 필요
+- **Content-Type**: `application/json`
 
-**강의 등록**
+**공통 에러 응답**
 ```json
+{
+  "code": "에러코드",
+  "message": "에러 메시지"
+}
+```
+
+| HTTP Status | 설명 |
+|-------------|------|
+| 200 | 성공 |
+| 201 | 생성 성공 |
+| 204 | 삭제 성공 (응답 본문 없음) |
+| 400 | 잘못된 요청 |
+| 403 | 권한 없음 |
+| 404 | 리소스 없음 |
+| 409 | 충돌 (중복 신청, 정원 초과 등) |
+
+---
+
+### 강의 (Course)
+
+#### POST /api/courses — 강의 등록
+
+**Request**
+```
 POST /api/courses
 X-User-Id: 1
-
+Content-Type: application/json
+```
+```json
 {
   "title": "Java 기초",
   "description": "Java 입문 강의입니다",
@@ -77,38 +100,360 @@ X-User-Id: 1
 }
 ```
 
-**강의 상태 변경** (`DRAFT → OPEN → CLOSED`)
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| title | String | ✅ | 강의 제목 |
+| description | String | | 강의 설명 |
+| price | int | ✅ | 가격 (0 이상) |
+| maxCapacity | int | ✅ | 최대 수강 인원 (1 이상) |
+| startDate | LocalDate | ✅ | 수강 시작일 (yyyy-MM-dd) |
+| endDate | LocalDate | ✅ | 수강 종료일 (yyyy-MM-dd) |
+
+**Response** `201 Created`
 ```json
+{
+  "id": 1,
+  "title": "Java 기초",
+  "description": "Java 입문 강의입니다",
+  "price": 50000,
+  "maxCapacity": 30,
+  "currentEnrollmentCount": 0,
+  "startDate": "2026-06-01",
+  "endDate": "2026-08-31",
+  "status": "DRAFT",
+  "creatorId": 1,
+  "createdAt": "2026-05-03T10:00:00"
+}
+```
+
+---
+
+#### GET /api/courses — 강의 목록 조회
+
+**Request**
+```
+GET /api/courses?status=OPEN&page=0&size=20
+X-User-Id: 1
+```
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|----------|------|------|------|
+| status | String | | DRAFT / OPEN / CLOSED (없으면 전체) |
+| page | int | | 페이지 번호 (기본값 0) |
+| size | int | | 페이지 크기 (기본값 20) |
+
+**Response** `200 OK`
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "title": "Java 기초",
+      "description": "Java 입문 강의입니다",
+      "price": 50000,
+      "maxCapacity": 30,
+      "currentEnrollmentCount": 5,
+      "startDate": "2026-06-01",
+      "endDate": "2026-08-31",
+      "status": "OPEN",
+      "creatorId": 1,
+      "createdAt": "2026-05-03T10:00:00"
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+
+---
+
+#### GET /api/courses/{courseId} — 강의 상세 조회
+
+**Request**
+```
+GET /api/courses/1
+X-User-Id: 1
+```
+
+**Response** `200 OK`
+```json
+{
+  "id": 1,
+  "title": "Java 기초",
+  "description": "Java 입문 강의입니다",
+  "price": 50000,
+  "maxCapacity": 30,
+  "currentEnrollmentCount": 5,
+  "startDate": "2026-06-01",
+  "endDate": "2026-08-31",
+  "status": "OPEN",
+  "creatorId": 1,
+  "createdAt": "2026-05-03T10:00:00"
+}
+```
+
+**에러 응답**
+| 상황 | code | status |
+|------|------|--------|
+| 강의 없음 | COURSE_NOT_FOUND | 404 |
+
+---
+
+#### PATCH /api/courses/{courseId}/status — 강의 상태 변경
+
+상태 전이: `DRAFT → OPEN → CLOSED` (역방향 불가)
+
+**Request**
+```
 PATCH /api/courses/1/status
 X-User-Id: 1
-
+Content-Type: application/json
+```
+```json
 { "status": "OPEN" }
 ```
 
-### 수강 신청(Enrollment)
-
-| Method | URL | 설명 |
-|--------|-----|------|
-| POST | /api/enrollments | 수강 신청 (PENDING) |
-| PATCH | /api/enrollments/{id}/confirm | 결제 확정 (CONFIRMED) |
-| PATCH | /api/enrollments/{id}/cancel | 수강 취소 |
-| GET | /api/enrollments/me | 내 수강 신청 목록 |
-| GET | /api/courses/{courseId}/enrollments | 강의별 수강생 목록 (크리에이터 전용) |
-
-**수강 신청**
+**Response** `200 OK`
 ```json
+{
+  "id": 1,
+  "title": "Java 기초",
+  "status": "OPEN",
+  ...
+}
+```
+
+**에러 응답**
+| 상황 | code | status |
+|------|------|--------|
+| 강의 없음 | COURSE_NOT_FOUND | 404 |
+| 유효하지 않은 전이 | INVALID_STATUS_TRANSITION | 400 |
+| 개설자가 아님 | NOT_COURSE_CREATOR | 403 |
+
+---
+
+### 수강 신청 (Enrollment)
+
+#### POST /api/enrollments — 수강 신청
+
+**Request**
+```
 POST /api/enrollments
 X-User-Id: 2
-
+Content-Type: application/json
+```
+```json
 { "courseId": 1 }
 ```
 
-### 대기열(Waitlist)
+**Response** `201 Created`
+```json
+{
+  "id": 1,
+  "courseId": 1,
+  "userId": 2,
+  "status": "PENDING",
+  "confirmedAt": null,
+  "createdAt": "2026-05-03T10:00:00"
+}
+```
 
-| Method | URL | 설명 |
-|--------|-----|------|
-| POST | /api/waitlist | 대기열 등록 |
-| DELETE | /api/waitlist/{courseId} | 대기열 취소 |
+**에러 응답**
+| 상황 | code | status |
+|------|------|--------|
+| 강의 없음 | COURSE_NOT_FOUND | 404 |
+| 신청 불가 상태 | COURSE_NOT_OPEN | 400 |
+| 이미 신청함 | ALREADY_ENROLLED | 409 |
+| 정원 초과 | COURSE_FULL | 409 |
+
+---
+
+#### PATCH /api/enrollments/{enrollmentId}/confirm — 결제 확정
+
+PENDING → CONFIRMED 상태 변경 (외부 결제 시스템 연동 대체)
+
+**Request**
+```
+PATCH /api/enrollments/1/confirm
+X-User-Id: 2
+```
+
+**Response** `200 OK`
+```json
+{
+  "id": 1,
+  "courseId": 1,
+  "userId": 2,
+  "status": "CONFIRMED",
+  "confirmedAt": "2026-05-03T10:05:00",
+  "createdAt": "2026-05-03T10:00:00"
+}
+```
+
+**에러 응답**
+| 상황 | code | status |
+|------|------|--------|
+| 신청 없음 | ENROLLMENT_NOT_FOUND | 404 |
+| 본인 신청 아님 | ENROLLMENT_NOT_OWNED | 403 |
+| PENDING 아님 | INVALID_STATUS_TRANSITION | 400 |
+
+---
+
+#### PATCH /api/enrollments/{enrollmentId}/cancel — 수강 취소
+
+- PENDING: 즉시 취소 가능
+- CONFIRMED: 결제 후 7일 이내만 취소 가능
+- 취소 시 대기열 1순위 자동 승격
+
+**Request**
+```
+PATCH /api/enrollments/1/cancel
+X-User-Id: 2
+```
+
+**Response** `200 OK`
+```json
+{
+  "id": 1,
+  "courseId": 1,
+  "userId": 2,
+  "status": "CANCELLED",
+  "confirmedAt": "2026-05-03T10:05:00",
+  "createdAt": "2026-05-03T10:00:00"
+}
+```
+
+**에러 응답**
+| 상황 | code | status |
+|------|------|--------|
+| 신청 없음 | ENROLLMENT_NOT_FOUND | 404 |
+| 본인 신청 아님 | ENROLLMENT_NOT_OWNED | 403 |
+| 이미 취소됨 | ALREADY_CANCELLED | 400 |
+| 취소 기간 초과 | CANCELLATION_PERIOD_EXPIRED | 400 |
+
+---
+
+#### GET /api/enrollments/me — 내 수강 신청 목록
+
+**Request**
+```
+GET /api/enrollments/me?page=0&size=20
+X-User-Id: 2
+```
+
+**Response** `200 OK`
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "courseId": 1,
+      "userId": 2,
+      "status": "CONFIRMED",
+      "confirmedAt": "2026-05-03T10:05:00",
+      "createdAt": "2026-05-03T10:00:00"
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+
+---
+
+#### GET /api/courses/{courseId}/enrollments — 강의별 수강생 목록 (크리에이터 전용)
+
+PENDING, CONFIRMED 상태만 조회됨
+
+**Request**
+```
+GET /api/courses/1/enrollments?page=0&size=20
+X-User-Id: 1
+```
+
+**Response** `200 OK`
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "courseId": 1,
+      "userId": 2,
+      "status": "CONFIRMED",
+      "confirmedAt": "2026-05-03T10:05:00",
+      "createdAt": "2026-05-03T10:00:00"
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+
+**에러 응답**
+| 상황 | code | status |
+|------|------|--------|
+| 강의 없음 | COURSE_NOT_FOUND | 404 |
+| 개설자가 아님 | NOT_COURSE_CREATOR | 403 |
+
+---
+
+### 대기열 (Waitlist)
+
+#### POST /api/waitlist — 대기열 등록
+
+정원이 꽉 찬 강의에 대기 등록. position이 낮을수록 우선순위 높음
+
+**Request**
+```
+POST /api/waitlist
+X-User-Id: 4
+Content-Type: application/json
+```
+```json
+{ "courseId": 1 }
+```
+
+**Response** `201 Created`
+```json
+{
+  "id": 1,
+  "courseId": 1,
+  "userId": 4,
+  "position": 1,
+  "createdAt": "2026-05-03T10:10:00"
+}
+```
+
+**에러 응답**
+| 상황 | code | status |
+|------|------|--------|
+| 강의 없음 | COURSE_NOT_FOUND | 404 |
+| 신청 불가 상태 | COURSE_NOT_OPEN | 400 |
+| 이미 수강 중 | ALREADY_ENROLLED | 409 |
+| 이미 대기 중 | ALREADY_ON_WAITLIST | 409 |
+
+---
+
+#### DELETE /api/waitlist/{courseId} — 대기열 취소
+
+**Request**
+```
+DELETE /api/waitlist/1
+X-User-Id: 4
+```
+
+**Response** `204 No Content`
+
+**에러 응답**
+| 상황 | code | status |
+|------|------|--------|
+| 대기열에 없음 | NOT_ON_WAITLIST | 404 |
 
 ## 데이터 모델 (ERD)
 
