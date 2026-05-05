@@ -526,5 +526,14 @@ open build/reports/tests/test/index.html
 
 ## AI 활용 범위
 
-Claude Code(claude-sonnet-4-6)를 사용하여 초기 코드 구조 및 보일러플레이트 생성에 활용했습니다.
-비관적 락 전략, 상태 전이 설계, 대기열 승격 로직, 동시성 테스트 설계는 직접 검토하고 수정했습니다.
+**직접 설계 및 구현한 부분**
+ - ERD 설계 (Course / Enrollment / Waitlist 테이블 구조 및 관계 정의)
+ - 도메인별 패키지 구조 설계 (course / enrollment / waitlist / common 분리)
+ - 레이어드 아키텍처 설계 (Controller → Service → Repository)
+ - 상태 변경 로직을 Service가 아닌 Entity 내부에 위치시키는 설계 결정 (상태 검증 누락 방지 목적)
+ - API 엔드포인트 설계 및 HTTP 메서드 결정
+ 
+ **AI 활용 부분 (Claude Code, GPT 5.5 Thinking)**
+ - 반복적인 구현체(Controller, Repository, DTO 등) 코드 초안 생성
+ - README 및 API 명세서 문서 작성
+ - 동시성 문제 인지 후 비관적 락 방식을 선택하여 적용 (AI와 해결법을 논의한 뒤 비관적 락 채택)
