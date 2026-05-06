@@ -13,7 +13,7 @@
 
 ## 실행 방법
 
-### 방법 1. H2 인메모리 DB (MySQL 설치 불필요, 가장 빠름)
+### 방법 1. H2 인메모리 DB
 
 ```bash
 ./gradlew bootRun --args='--spring.profiles.active=h2'
